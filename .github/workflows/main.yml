@@ -1,0 +1,50 @@
+name: Build App
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Fetch logo, fonts and icons
+        run: bash tools/fetch_assets.sh
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.11.1
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
+      - name: Build signed release (AAB and APK)
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            export KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
+            gradle bundleRelease assembleRelease --no-daemon
+          else
+            echo "No keystore secret: skipping release build"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DreamCollege-debug-APK
+          path: app/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DreamCollege-release-for-PlayStore
+          path: |
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/apk/release/*.apk
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-assets
+          path: store/*
+          if-no-files-found: ignore
