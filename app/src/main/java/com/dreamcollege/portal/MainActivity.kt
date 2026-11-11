@@ -129,10 +129,9 @@ class MainActivity : ComponentActivity() {
                 mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                 userAgentString = userAgentString + " DreamCollegeApp/1.0"
             }
-            CookieManager.getInstance().apply {
-                setAcceptCookie(true)
-                setAcceptThirdPartyCookies(this@apply, true)
-            }
+            val cm = CookieManager.getInstance()
+            cm.setAcceptCookie(true)
+            cm.setAcceptThirdPartyCookies(this, true)
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val u = request.url
